@@ -42,6 +42,7 @@ class Batch:
         self.decoderSeqs = []
         self.targetSeqs = []
         self.weights = []
+        self.encoderLengths = []
 
 
 class TextData:
@@ -154,6 +155,8 @@ class TextData:
             # once and reuse those every time. Is not the bottleneck so won't change
             # much ? and if preprocessing, should be compatible with autoEncode & cie.
             batch.encoderSeqs.append(list(reversed(sample[0])))  # Reverse inputs (and not outputs), little trick as defined on the original seq2seq paper
+            batch.encoderLengths.append(len(batch.encoderSeqs[i]))
+
             batch.decoderSeqs.append([self.goToken] + sample[1] + [self.eosToken])  # Add the <go> and <eos> tokens
             batch.targetSeqs.append(batch.decoderSeqs[-1][1:])  # Same as decoder, but shifted to the left (ignore the <go>)
 

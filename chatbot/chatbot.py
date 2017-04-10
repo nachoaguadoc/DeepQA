@@ -31,8 +31,8 @@ from tqdm import tqdm  # Progress bar
 from tensorflow.python import debug as tf_debug
 
 from chatbot.textdata import TextData
-from chatbot.model import Model
-
+#from chatbot.model import Model
+from chatbot.hred import Model
 
 class Chatbot:
     """
@@ -249,6 +249,7 @@ class Chatbot:
                     ops, feedDict = self.model.step(nextBatch)
                     assert len(ops) == 2  # training, loss
                     _, loss, summary = sess.run(ops + (mergedSummaries,), feedDict)
+                    print(loss)
                     self.writer.add_summary(summary, self.globStep)
                     self.globStep += 1
 
