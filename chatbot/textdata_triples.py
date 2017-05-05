@@ -350,11 +350,12 @@ class TextData:
 
         # 1st step: Iterate over all words and add filters the sentences
         # according to the sentence lengths
-        for inputWords, targetWords in tqdm(self.trainingSamples, desc='Filter sentences:', leave=False):
+        for inputWords, contextWords, targetWords in tqdm(self.trainingSamples, desc='Filter sentences:', leave=False):
             inputWords = mergeSentences(inputWords, fromEnd=True)
+            contextWords = mergeSentences(contextWords, fromEnd=True)
             targetWords = mergeSentences(targetWords, fromEnd=False)
 
-            newSamples.append([inputWords, targetWords])
+            newSamples.append([inputWords, contextWords, targetWords])
         words = []
 
         # WARNING: DO NOT FILTER THE UNKNOWN TOKEN !!! Only word which has count==0 ?
@@ -393,13 +394,14 @@ class TextData:
             return valid
 
         self.trainingSamples.clear()
-        for inputWords, targetWords in tqdm(newSamples, desc='Replace ids:', leave=False):
+        for inputWords, contextWords, targetWords in tqdm(newSamples, desc='Replace ids:', leave=False):
             valid = True
             valid &= replace_words(inputWords)
+            valid &= replace_words(contextWords)
             valid &= replace_words(targetWords)
 
             if valid:
-                self.trainingSamples.append([inputWords, targetWords])  # TODO: Could replace list by tuple
+                self.trainingSamples.append([inputWords, contextWords, targetWords])  # TODO: Could replace list by tuple
 
         self.idCount.clear()  # Not usefull anymore. Free data
 
