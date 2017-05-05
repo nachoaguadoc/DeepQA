@@ -78,7 +78,7 @@ class TextData:
         self.corpusDir = os.path.join(self.args.rootDir, 'data', self.args.corpus)
         basePath = self._constructBasePath()
         self.fullSamplesPath = basePath + '.pkl'  # Full sentences length/vocab
-        self.filteredSamplesPath = basePath + '-lenght{}-filter{}.pkl'.format(
+        self.filteredSamplesPath = basePath + 'triples-lenght{}-filter{}.pkl'.format(
             self.args.maxLength,
             self.args.filterVocab,
         )  # Sentences/vocab filtered for this model
@@ -429,16 +429,18 @@ class TextData:
         """
 
         # Iterate over all the lines of the conversation
-        for i in tqdm_wrap(range(len(conversation['lines']) - 1),  # We ignore the last line (no answer for it)
+        for i in tqdm_wrap(range(len(conversation['lines']) - 2),  # We ignore the last line (no answer for it)
                            desc='Conversation', leave=False):
             inputLine  = conversation['lines'][i]
-            targetLine = conversation['lines'][i+1]
+            contextLine = conversation['lines'][i+1]
+            targetLine = conversation['lines'][i+2]
 
             inputWords  = self.extractText(inputLine['text'])
+            contextWords  = self.extractText(contextLine['text'])
             targetWords = self.extractText(targetLine['text'])
 
             if inputWords and targetWords:  # Filter wrong samples (if one of the list is empty)
-                self.trainingSamples.append([inputWords, targetWords])
+                self.trainingSamples.append([inputWords, contextWords, targetWords])
 
     def extractText(self, line):
         """Extract the words from a sample lines
