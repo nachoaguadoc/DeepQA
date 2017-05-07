@@ -158,6 +158,7 @@ class TextData:
             for u in range(numberOfUtterances):
                 batch.encoderSeqs.append([])
                 batch.encoderSeqs[u].append(list(reversed(sample[u])))  # Reverse inputs (and not outputs), little trick as defined on the original seq2seq paper
+                batch.encoderLengths.append([])
                 batch.encoderLengths[u].append(len(batch.encoderSeqs[u][i]))
             
                 batch.decoderSeqs.append([])
@@ -172,6 +173,7 @@ class TextData:
                 # TODO: Should use tf batch function to automatically add padding and batch samples
                 # Add padding & define weight
                 batch.encoderSeqs[u][i]   = [self.padToken] * (self.args.maxLengthEnco  - len(batch.encoderSeqs[u][i])) + batch.encoderSeqs[u][i]  # Left padding for the input
+                batch.weights.append([])
                 batch.weights.append([1.0] * len(batch.targetSeqs[u][i]) + [0.0] * (self.args.maxLengthDeco - len(batch.targetSeqs[u][i])))
                 batch.decoderSeqs[u][i] = batch.decoderSeqs[u][i] + [self.padToken] * (self.args.maxLengthDeco - len(batch.decoderSeqs[u][i]))
                 batch.targetSeqs[u][i]  = batch.targetSeqs[u][i]  + [self.padToken] * (self.args.maxLengthDeco - len(batch.targetSeqs[u][i]))
