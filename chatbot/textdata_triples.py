@@ -141,7 +141,7 @@ class TextData:
 
         batch = Batch()
         batchSize = len(samples)
-
+        numberOfUtterances = 2
         # Create the batch tensor
         for i in range(batchSize):
             # Unpack the sample
@@ -154,55 +154,59 @@ class TextData:
             # TODO: Why re-processed that at each epoch ? Could precompute that
             # once and reuse those every time. Is not the bottleneck so won't change
             # much ? and if preprocessing, should be compatible with autoEncode & cie.
-            batch.encoderSeqs.append(list(reversed(sample[0])))  # Reverse inputs (and not outputs), little trick as defined on the original seq2seq paper
-            batch.encoderLengths.append(len(batch.encoderSeqs[i]))
+            
+            for u in range(numberOfUtterances):
+                batch.encoderSeqs.append([])
+                batch.encoderSeqs[u].append(list(reversed(sample[u])))  # Reverse inputs (and not outputs), little trick as defined on the original seq2seq paper
+                batch.encoderLengths[u].append(len(batch.encoderSeqs[u][i]))
+            
+                batch.decoderSeqs.append([])
+                batch.decoderSeqs[u].append([self.goToken] + sample[u+1] + [self.eosToken])  # Add the <go> and <eos> tokens
+                batch.targetSeqs.append([])
+                batch.targetSeqs[u].append(batch.decoderSeqs[u][-1][1:])  # Same as decoder, but shifted to the left (ignore the <go>)
 
-            batch.decoderSeqs.append([self.goToken] + sample[1] + [self.eosToken])  # Add the <go> and <eos> tokens
-            batch.targetSeqs.append(batch.decoderSeqs[-1][1:])  # Same as decoder, but shifted to the left (ignore the <go>)
+                # Long sentences should have been filtered during the dataset creation
+                assert len(batch.encoderSeqs[u][i]) <= self.args.maxLengthEnco
+                assert len(batch.decoderSeqs[u][i]) <= self.args.maxLengthDeco
 
-            # Long sentences should have been filtered during the dataset creation
-            assert len(batch.encoderSeqs[i]) <= self.args.maxLengthEnco
-            assert len(batch.decoderSeqs[i]) <= self.args.maxLengthDeco
+                # TODO: Should use tf batch function to automatically add padding and batch samples
+                # Add padding & define weight
+                batch.encoderSeqs[u][i]   = [self.padToken] * (self.args.maxLengthEnco  - len(batch.encoderSeqs[u][i])) + batch.encoderSeqs[u][i]  # Left padding for the input
+                batch.weights.append([1.0] * len(batch.targetSeqs[u][i]) + [0.0] * (self.args.maxLengthDeco - len(batch.targetSeqs[u][i])))
+                batch.decoderSeqs[u][i] = batch.decoderSeqs[u][i] + [self.padToken] * (self.args.maxLengthDeco - len(batch.decoderSeqs[u][i]))
+                batch.targetSeqs[u][i]  = batch.targetSeqs[u][i]  + [self.padToken] * (self.args.maxLengthDeco - len(batch.targetSeqs[u][i]))
+        for u in range(numberOfUtterances):
+            # Simple hack to reshape the batch
+            encoderSeqsT = []  # Corrected orientation
+            for i in range(self.args.maxLengthEnco):
+                encoderSeqT = []
+                for j in range(batchSize):
+                    encoderSeqT.append(batch.encoderSeqs[u][j][i])
+                encoderSeqsT.append(encoderSeqT)
+            batch.encoderSeqs[u] = encoderSeqsT
 
-            # TODO: Should use tf batch function to automatically add padding and batch samples
-            # Add padding & define weight
-            batch.encoderSeqs[i]   = [self.padToken] * (self.args.maxLengthEnco  - len(batch.encoderSeqs[i])) + batch.encoderSeqs[i]  # Left padding for the input
-            batch.weights.append([1.0] * len(batch.targetSeqs[i]) + [0.0] * (self.args.maxLengthDeco - len(batch.targetSeqs[i])))
-            batch.decoderSeqs[i] = batch.decoderSeqs[i] + [self.padToken] * (self.args.maxLengthDeco - len(batch.decoderSeqs[i]))
-            batch.targetSeqs[i]  = batch.targetSeqs[i]  + [self.padToken] * (self.args.maxLengthDeco - len(batch.targetSeqs[i]))
-
-        # Simple hack to reshape the batch
-        encoderSeqsT = []  # Corrected orientation
-        for i in range(self.args.maxLengthEnco):
-            encoderSeqT = []
-            for j in range(batchSize):
-                encoderSeqT.append(batch.encoderSeqs[j][i])
-            encoderSeqsT.append(encoderSeqT)
-        batch.encoderSeqs = encoderSeqsT
-
-        decoderSeqsT = []
-        targetSeqsT = []
-        weightsT = []
-        for i in range(self.args.maxLengthDeco):
-            decoderSeqT = []
-            targetSeqT = []
-            weightT = []
-            for j in range(batchSize):
-                decoderSeqT.append(batch.decoderSeqs[j][i])
-                targetSeqT.append(batch.targetSeqs[j][i])
-                weightT.append(batch.weights[j][i])
-            decoderSeqsT.append(decoderSeqT)
-            targetSeqsT.append(targetSeqT)
-            weightsT.append(weightT)
-        batch.decoderSeqs = decoderSeqsT
-        batch.targetSeqs = targetSeqsT
-        batch.weights = weightsT
+            decoderSeqsT = []
+            targetSeqsT = []
+            weightsT = []
+            for i in range(self.args.maxLengthDeco):
+                decoderSeqT = []
+                targetSeqT = []
+                weightT = []
+                for j in range(batchSize):
+                    decoderSeqT.append(batch.decoderSeqs[u][j][i])
+                    targetSeqT.append(batch.targetSeqs[u][j][i])
+                    weightT.append(batch.weights[u][j][i])
+                decoderSeqsT.append(decoderSeqT)
+                targetSeqsT.append(targetSeqT)
+                weightsT.append(weightT)
+            batch.decoderSeqs[u] = decoderSeqsT
+            batch.targetSeqs[u] = targetSeqsT
+            batch.weights[u] = weightsT
 
         # # Debug
         # self.printBatch(batch)  # Input inverted, padding should be correct
         # print(self.sequence2str(samples[0][0]))
         # print(self.sequence2str(samples[0][1]))  # Check we did not modified the original sample
-
         return batch
 
     def getBatches(self):
