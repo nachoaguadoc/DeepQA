@@ -238,15 +238,13 @@ class Model:
         feedDict = {}
         ops = None
         if not self.args.test:  # Training
-
-            feedDict[self.utteranceEncLengths] = batch.encoderLengths
-
-            feedDict[self.utteranceEncInputs] =  np.reshape(batch.encoderSeqs, (self.args.maxLengthEnco, self.args.batchSize, 1))
-            #initial_state = self.contextCell.zero_state(self.args.batchSize, tf.float32) if self.reset else self.lastContextState
-            for i in range(self.args.maxLengthDeco):
-                feedDict[self.decoderInputs[i]]  = batch.decoderSeqs[i]
-                feedDict[self.decoderTargets[i]] = batch.targetSeqs[i]
-                feedDict[self.decoderWeights[i]] = batch.weights[i]
+            feedDict[self.utteranceEncLengths] = np.reshape(np.dstack((batch.encoderLengths[0], batch.encoderLengths[1])), (self.args.batchSize, self.numberUtterances))
+            feedDict[self.utteranceEncInputs] = np.reshape(np.dstack((batch.encoderSeqs[0], batch.encoderSeqs[1])), (self.args.maxLengthEnco, self.args.batchSize, self.numberUtterances))
+            for u in range(self.numberUtterances):
+                for i in range(self.args.maxLengthDeco):
+                    feedDict[self.decoderInputs[u][i]]  = batch.decoderSeqs[u][i]
+                    feedDict[self.decoderTargets[u][i]] = batch.targetSeqs[u][i]
+                    feedDict[self.decoderWeights[u][i]] = batch.weights[u][i]
 
             ops = (self.optOp, self.lossFct)
         else:  # Testing (batchSize == 1)
