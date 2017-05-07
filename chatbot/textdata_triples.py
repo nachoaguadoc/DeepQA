@@ -43,6 +43,7 @@ class Batch:
         self.targetSeqs = []
         self.weights = []
         self.encoderLengths = []
+        self.batchSize = 0
 
 
 class TextData:
@@ -141,6 +142,7 @@ class TextData:
 
         batch = Batch()
         batchSize = len(samples)
+        batch.batchSize = batchSize
         numberOfUtterances = 2
         # Create the batch tensor
         for u in range(numberOfUtterances):
