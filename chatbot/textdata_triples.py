@@ -143,6 +143,12 @@ class TextData:
         batchSize = len(samples)
         numberOfUtterances = 2
         # Create the batch tensor
+        for u in range(numberOfUtterances):
+            batch.encoderSeqs.append([])
+            batch.decoderSeqs.append([])
+            batch.encoderLengths.append([])
+            batch.weights.append([])
+            batch.targetSeqs.append([])
         for i in range(batchSize):
             # Unpack the sample
             sample = samples[i]
@@ -156,14 +162,9 @@ class TextData:
             # much ? and if preprocessing, should be compatible with autoEncode & cie.
             
             for u in range(numberOfUtterances):
-                batch.encoderSeqs.append([])
-                batch.encoderSeqs[u].append(list(reversed(sample[u])))  # Reverse inputs (and not outputs), little trick as defined on the original seq2seq paper
-                batch.encoderLengths.append([])
+                batch.encoderSeqs[u].append(list(reversed(sample[u])))  # Reverse inputs (and not outputs), little trick as defined on the original seq2seq paper                
                 batch.encoderLengths[u].append(len(batch.encoderSeqs[u][i]))
-            
-                batch.decoderSeqs.append([])
                 batch.decoderSeqs[u].append([self.goToken] + sample[u+1] + [self.eosToken])  # Add the <go> and <eos> tokens
-                batch.targetSeqs.append([])
                 batch.targetSeqs[u].append(batch.decoderSeqs[u][-1][1:])  # Same as decoder, but shifted to the left (ignore the <go>)
 
                 # Long sentences should have been filtered during the dataset creation
@@ -173,8 +174,7 @@ class TextData:
                 # TODO: Should use tf batch function to automatically add padding and batch samples
                 # Add padding & define weight
                 batch.encoderSeqs[u][i]   = [self.padToken] * (self.args.maxLengthEnco  - len(batch.encoderSeqs[u][i])) + batch.encoderSeqs[u][i]  # Left padding for the input
-                batch.weights.append([])
-                batch.weights.append([1.0] * len(batch.targetSeqs[u][i]) + [0.0] * (self.args.maxLengthDeco - len(batch.targetSeqs[u][i])))
+                batch.weights[u].append([1.0] * len(batch.targetSeqs[u][i]) + [0.0] * (self.args.maxLengthDeco - len(batch.targetSeqs[u][i])))
                 batch.decoderSeqs[u][i] = batch.decoderSeqs[u][i] + [self.padToken] * (self.args.maxLengthDeco - len(batch.decoderSeqs[u][i]))
                 batch.targetSeqs[u][i]  = batch.targetSeqs[u][i]  + [self.padToken] * (self.args.maxLengthDeco - len(batch.targetSeqs[u][i]))
         for u in range(numberOfUtterances):
