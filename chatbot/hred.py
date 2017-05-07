@@ -127,7 +127,7 @@ class Model:
         # inputs: [ batchSize * sentenceLength * wordDimensions ]
         # lengths: [ batchSize ] length of each sentence in the batch (without taking padding into account)
         def context_encoder(cell, inputs, reset, batch_size=1, dtype=tf.float32, scope='context_encoder'):
-            initial_state = cell.zero_state(self.args.batchSize, tf.float32) if reset else self.lastContextState
+            initial_state = cell.zero_state(self.batchSize, tf.float32) if reset else self.lastContextState
             outputs, state = tf.nn.dynamic_rnn(
                 cell=cell,
                 dtype=dtype,
@@ -178,7 +178,7 @@ class Model:
                         inputs=utteranceEncInput,
                         sequence_length=utteranceEncLength,
                         reset=True,
-                        batch_size=self.args.batchSize
+                        batch_size=self.batchSize
                     )
 
                 with tf.variable_scope('context', reuse=reuse):
