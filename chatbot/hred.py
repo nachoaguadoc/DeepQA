@@ -156,14 +156,15 @@ class Model:
         # Network input (placeholders)
         
         with tf.name_scope('placeholder_utterance_encoder'):
-            self.utteranceEncInputs  = tf.placeholder(tf.int32, [self.args.maxLengthEnco, None, None])
-            self.utteranceEncLengths = tf.placeholder(tf.int32, [None, None]) # Batch size
+            self.utteranceEncInputs  = tf.placeholder(tf.int32, [self.args.maxLengthEnco, None, ])
+            self.utteranceEncLengths = tf.placeholder(tf.int32, [None, ]) # Batch size
 
         with tf.name_scope('placeholder_decoder'):
             self.decoderInputs  = [[tf.placeholder(tf.int32,   [None, ], name='inputs') for _ in range(self.args.maxLengthDeco)] for _ in range(self.numberUtterances)]  # Same sentence length for input and output (Right ?)
             self.decoderTargets = [[tf.placeholder(tf.int32,   [None, ], name='targets') for _ in range(self.args.maxLengthDeco)] for _ in range(self.numberUtterances)]
             self.decoderWeights = [[tf.placeholder(tf.float32, [None, ], name='weights') for _ in range(self.args.maxLengthDeco)] for _ in range(self.numberUtterances)]
-
+            
+            self.decoderInputsTest  = [tf.placeholder(tf.int32,   [None, ], name='inputs_test') for _ in range(self.args.maxLengthDeco)]
         if not self.args.test:
             self.lossFct = 0
             for i in range(self.numberUtterances):
@@ -223,12 +224,41 @@ class Model:
         # training and reduce memory usage. Other solution, use sampling softmax
         # For testing only
         else:
-            outputProjection = False
-            if self.args.test:
-                if not outputProjection:
-                    self.outputs = decoderOutputs
-                else:
-                    self.outputs = [outputProjection(output) for output in decoderOutputs]
+            reuse = False if i==0 else True
+            reset = not reuse
+            with tf.variable_scope('utterances', reuse=reuse):
+                utteranceEncInput = self.utteranceEncInputs[:,:,1]
+                utteranceEncLength = tf.reshape(self.utteranceEncLengths[:,1], [1])
+
+                utteranceEncOutputs, utteranceEncState = utterance_encoder(
+                    cell=utterance_encoder_cell,
+                    inputs=utteranceEncInput,
+                    sequence_length=utteranceEncLength,
+                    reset=True,
+                    batch_size=self.batchSize
+                )
+
+            with tf.variable_scope('context', reuse=reuse):
+                self.contextEncInputs = tf.reshape(utteranceEncOutputs[-1], [1, 1, self.args.hiddenSize])
+
+                contextEncOutputs, contextEncState = context_encoder(
+                    cell=context_encoder_cell,
+                    inputs=self.contextEncInputs,
+                    reset=False
+                )
+
+                self.lastContextState = contextEncState
+
+            with tf.variable_scope('decoders', reuse=reuse):
+                decoderOutputs, decoderState = decoder(
+                    cell=decoder_cell,
+                    inputs=self.decoderInputs[i],
+                    initial_state=self.lastContextState,
+                    feed_previous=bool(self.args.test),
+                    dtype=tf.int32
+                )
+
+            self.outputs = decoderOutputs
 
     def step(self, batch):
 
@@ -256,7 +286,7 @@ class Model:
         else:  # Testing (batchSize == 1)
             for i in range(self.args.maxLengthEnco):
                 feedDict[self.utteranceEncInputs[i]]  = batch.encoderSeqs[i]
-            feedDict[self.decoderInputs[0]]  = [self.textData.goToken]
+            feedDict[self.decoderInputsTest[0]]  = [self.textData.goToken]
 
             ops = (self.outputs,)
 
