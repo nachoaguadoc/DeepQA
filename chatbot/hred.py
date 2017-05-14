@@ -50,7 +50,6 @@ class Model:
         self.decoderInputs  = None  # Same that decoderTarget plus the <go>
         self.decoderTargets = None
         self.decoderWeights = None  # Adjust the learning to the target sentence size
-
         # Main operators
         self.lossFct = None
         self.optOp = None
@@ -156,8 +155,8 @@ class Model:
         # Network input (placeholders)
         
         with tf.name_scope('placeholder_utterance_encoder'):
-            self.utteranceEncInputs  = tf.placeholder(tf.int32, [self.args.maxLengthEnco, None, None])
-            self.utteranceEncLengths = tf.placeholder(tf.int32, [None, None]) # Batch size
+            self.utteranceEncInputs  = tf.placeholder(tf.int32, [self.args.maxLengthEnco, None, None], name='utterance_enc_inputs')
+            self.utteranceEncLengths = tf.placeholder(tf.int32, [None, None],  name='utterance_enc_lengths') # Batch size
 
         with tf.name_scope('placeholder_decoder'):
             self.decoderInputs  = [[tf.placeholder(tf.int32,   [None, ], name='inputs') for _ in range(self.args.maxLengthDeco)] for _ in range(self.numberUtterances)]  # Same sentence length for input and output (Right ?)
@@ -236,7 +235,6 @@ class Model:
                     reset=True,
                     batch_size=1
                 )
-
             with tf.variable_scope('context'):
                 print(self.lastContextState)
                 self.contextEncInputs = tf.reshape(utteranceEncOutputs[-1], [1, 1, self.args.hiddenSize])
@@ -256,7 +254,6 @@ class Model:
                     feed_previous=bool(self.args.test),
                     dtype=tf.int32
                 )
-
             self.outputs = decoderOutputs
 
     def step(self, batch):
@@ -284,11 +281,10 @@ class Model:
             ops = (self.optOp, self.lossFct)
         else:  # Testing (batchSize == 1)
             feedDict[self.batchSize] = batch.batchSize
-            for i in range(self.args.maxLengthEnco):
-                feedDict[self.utteranceEncInputs[i]]  = batch.encoderSeqs[i]
+            feedDict[self.utteranceEncLengths] = np.reshape(batch.encoderLengths, [1,1])
+            feedDict[self.utteranceEncInputs] = np.reshape(batch.encoderSeqs, [self.args.maxLengthEnco, batch.batchSize, 1])
             feedDict[self.decoderInputsTest[0]]  = [self.textData.goToken]
             ops = (self.outputs,)
-
         # Return one pass operator
 
         return ops, feedDict
