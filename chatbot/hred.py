@@ -226,7 +226,7 @@ class Model:
         else:
             #reuse = False if i==0 else True
             #reset = not reuse
-            with tf.variable_scope('utterances', reuse=reuse):
+            with tf.variable_scope('utterances', reuse=False):
                 utteranceEncInput = self.utteranceEncInputs[:,:,1]
                 utteranceEncLength = tf.reshape(self.utteranceEncLengths[:,1], [1])
 
@@ -238,7 +238,8 @@ class Model:
                     batch_size=1
                 )
 
-            with tf.variable_scope('context', reuse=reuse):
+            with tf.variable_scope('context'):
+                print(self.lastContextState)
                 self.contextEncInputs = tf.reshape(utteranceEncOutputs[-1], [1, 1, self.args.hiddenSize])
 
                 contextEncOutputs, contextEncState = context_encoder(
@@ -249,7 +250,7 @@ class Model:
 
                 self.lastContextState = contextEncState
 
-            with tf.variable_scope('decoders', reuse=reuse):
+            with tf.variable_scope('decoders'):
                 decoderOutputs, decoderState = decoder(
                     cell=decoder_cell,
                     inputs=self.decoderInputs[i],
