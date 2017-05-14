@@ -156,8 +156,8 @@ class Model:
         # Network input (placeholders)
         
         with tf.name_scope('placeholder_utterance_encoder'):
-            self.utteranceEncInputs  = tf.placeholder(tf.int32, [self.args.maxLengthEnco, None, ])
-            self.utteranceEncLengths = tf.placeholder(tf.int32, [None, ]) # Batch size
+            self.utteranceEncInputs  = tf.placeholder(tf.int32, [self.args.maxLengthEnco, None, None])
+            self.utteranceEncLengths = tf.placeholder(tf.int32, [None, None]) # Batch size
 
         with tf.name_scope('placeholder_decoder'):
             self.decoderInputs  = [[tf.placeholder(tf.int32,   [None, ], name='inputs') for _ in range(self.args.maxLengthDeco)] for _ in range(self.numberUtterances)]  # Same sentence length for input and output (Right ?)
@@ -227,9 +227,8 @@ class Model:
             #reuse = False if i==0 else True
             #reset = not reuse
             with tf.variable_scope('utterances', reuse=False):
-                utteranceEncInput = self.utteranceEncInputs[:,:,1]
+                utteranceEncInput = tf.reshape(self.utteranceEncInputs[:,:,1], [self.args.maxLengthEnco, self.batchSize, 1])
                 utteranceEncLength = tf.reshape(self.utteranceEncLengths[:,1], [1])
-
                 utteranceEncOutputs, utteranceEncState = utterance_encoder(
                     cell=utterance_encoder_cell,
                     inputs=utteranceEncInput,
@@ -249,11 +248,10 @@ class Model:
                 )
 
                 self.lastContextState = contextEncState
-
             with tf.variable_scope('decoders'):
                 decoderOutputs, decoderState = decoder(
                     cell=decoder_cell,
-                    inputs=self.decoderInputs[i],
+                    inputs=self.decoderInputsTest,
                     initial_state=self.lastContextState,
                     feed_previous=bool(self.args.test),
                     dtype=tf.int32
@@ -285,10 +283,10 @@ class Model:
 
             ops = (self.optOp, self.lossFct)
         else:  # Testing (batchSize == 1)
+            feedDict[self.batchSize] = batch.batchSize
             for i in range(self.args.maxLengthEnco):
                 feedDict[self.utteranceEncInputs[i]]  = batch.encoderSeqs[i]
             feedDict[self.decoderInputsTest[0]]  = [self.textData.goToken]
-
             ops = (self.outputs,)
 
         # Return one pass operator
