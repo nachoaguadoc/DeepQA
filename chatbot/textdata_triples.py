@@ -214,24 +214,25 @@ class TextData:
                 # TODO: Why re-processed that at each epoch ? Could precompute that
                 # once and reuse those every time. Is not the bottleneck so won't change
                 # much ? and if preprocessing, should be compatible with autoEncode & cie.
-                
-                    batch.encoderSeqs.append(list(reversed(sample[u])))  # Reverse inputs (and not outputs), little trick as defined on the original seq2seq paper                
-                    batch.encoderLengths.append(len(batch.encoderSeqs[i]))
-                    # Long sentences should have been filtered during the dataset creation
-                    assert len(batch.encoderSeqs[i]) <= self.args.maxLengthEnco
+                sample = samples[i]
 
-                    # TODO: Should use tf batch function to automatically add padding and batch samples
-                    # Add padding & define weight
-                    batch.encoderSeqs[i]   = [self.padToken] * (self.args.maxLengthEnco  - len(batch.encoderSeqs[i])) + batch.encoderSeqs[i]  # Left padding for the input
+                batch.encoderSeqs.append(list(reversed(sample)))  # Reverse inputs (and not outputs), little trick as defined on the original seq2seq paper                
+                batch.encoderLengths.append(len(batch.encoderSeqs[i]))
+                # Long sentences should have been filtered during the dataset creation
+                assert len(batch.encoderSeqs[i]) <= self.args.maxLengthEnco
 
-                    # Simple hack to reshape the batch
-                    encoderSeqsT = []  # Corrected orientation
-                    for i in range(self.args.maxLengthEnco):
-                        encoderSeqT = []
-                        for j in range(batchSize):
-                            encoderSeqT.append(batch.encoderSeqs[j][i])
-                        encoderSeqsT.append(encoderSeqT)
-                    batch.encoderSeqs[u] = encoderSeqsT
+                # TODO: Should use tf batch function to automatically add padding and batch samples
+                # Add padding & define weight
+                batch.encoderSeqs[i]   = [self.padToken] * (self.args.maxLengthEnco  - len(batch.encoderSeqs[i])) + batch.encoderSeqs[i]  # Left padding for the input
+
+                # Simple hack to reshape the batch
+                encoderSeqsT = []  # Corrected orientation
+                for i in range(self.args.maxLengthEnco):
+                    encoderSeqT = []
+                    for j in range(batchSize):
+                        encoderSeqT.append(batch.encoderSeqs[j][i])
+                    encoderSeqsT.append(encoderSeqT)
+                batch.encoderSeqs[u] = encoderSeqsT
 
         # self.printBatch(batch)  # Input inverted, padding should be correct
         # print(self.sequence2str(samples[0][0]))

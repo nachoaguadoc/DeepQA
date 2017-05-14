@@ -206,7 +206,7 @@ class Model:
                     decoderOutputs,
                     self.decoderTargets[i],
                     self.decoderWeights[i],
-                    self.textData.getVocabularySize(),
+                    self.te xtData.getVocabularySize(),
                     softmax_loss_function= None  # If None, use default SoftMax
                 )
             print(self.lossFct)
@@ -224,8 +224,8 @@ class Model:
         # training and reduce memory usage. Other solution, use sampling softmax
         # For testing only
         else:
-            reuse = False if i==0 else True
-            reset = not reuse
+            #reuse = False if i==0 else True
+            #reset = not reuse
             with tf.variable_scope('utterances', reuse=reuse):
                 utteranceEncInput = self.utteranceEncInputs[:,:,1]
                 utteranceEncLength = tf.reshape(self.utteranceEncLengths[:,1], [1])
@@ -235,7 +235,7 @@ class Model:
                     inputs=utteranceEncInput,
                     sequence_length=utteranceEncLength,
                     reset=True,
-                    batch_size=self.batchSize
+                    batch_size=1
                 )
 
             with tf.variable_scope('context', reuse=reuse):
