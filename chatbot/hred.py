@@ -206,7 +206,7 @@ class Model:
                     decoderOutputs,
                     self.decoderTargets[i],
                     self.decoderWeights[i],
-                    self.te xtData.getVocabularySize(),
+                    self.textData.getVocabularySize(),
                     softmax_loss_function= None  # If None, use default SoftMax
                 )
             print(self.lossFct)
