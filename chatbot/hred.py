@@ -163,7 +163,6 @@ class Model:
             self.decoderTargets = [[tf.placeholder(tf.int32,   [None, ], name='targets') for _ in range(self.args.maxLengthDeco)] for _ in range(self.numberUtterances)]
             self.decoderWeights = [[tf.placeholder(tf.float32, [None, ], name='weights') for _ in range(self.args.maxLengthDeco)] for _ in range(self.numberUtterances)]
             
-            self.decoderInputsTest  = [tf.placeholder(tf.int32,   [None, ], name='inputs_test') for _ in range(self.args.maxLengthDeco)]
         if not self.args.test:
             self.lossFct = 0
             for i in range(self.numberUtterances):
@@ -283,7 +282,7 @@ class Model:
             feedDict[self.batchSize] = batch.batchSize
             feedDict[self.utteranceEncLengths] = np.reshape(batch.encoderLengths, [1,1])
             feedDict[self.utteranceEncInputs] = np.reshape(batch.encoderSeqs, [self.args.maxLengthEnco, batch.batchSize, 1])
-            feedDict[self.decoderInputsTest[0]]  = [self.textData.goToken]
+            feedDict[self.decoderInputs[0][0]]  = [self.textData.goToken]
             ops = (self.outputs,)
         # Return one pass operator
 
