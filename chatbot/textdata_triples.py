@@ -174,24 +174,24 @@ class TextData:
                     batch.targetSeqs[i]  = batch.targetSeqs[i]  + [self.padToken] * (self.args.maxLengthDeco - len(batch.targetSeqs[i]))
 
                     encoderSeqsT = []  # Corrected orientation
-                    for i in range(self.args.maxLengthEnco):
+                    for k in range(self.args.maxLengthEnco):
                         encoderSeqT = []
                         for j in range(batchSize):
-                            encoderSeqT.append(batch.encoderSeqs[j][i])
+                            encoderSeqT.append(batch.encoderSeqs[j][k])
                         encoderSeqsT.append(encoderSeqT)
                     batch.encoderSeqs = encoderSeqsT
 
                     decoderSeqsT = []
                     targetSeqsT = []
                     weightsT = []
-                    for i in range(self.args.maxLengthDeco):
+                    for k in range(self.args.maxLengthDeco):
                         decoderSeqT = []
                         targetSeqT = []
                         weightT = []
                         for j in range(batchSize):
-                            decoderSeqT.append(batch.decoderSeqs[j][i])
-                            targetSeqT.append(batch.targetSeqs[j][i])
-                            weightT.append(batch.weights[j][i])
+                            decoderSeqT.append(batch.decoderSeqs[j][k])
+                            targetSeqT.append(batch.targetSeqs[j][k])
+                            weightT.append(batch.weights[j][k])
                         decoderSeqsT.append(decoderSeqT)
                         targetSeqsT.append(targetSeqT)
                         weightsT.append(weightT)
