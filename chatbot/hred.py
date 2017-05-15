@@ -69,8 +69,8 @@ class Model:
             state_variables = []
             for state_c, state_h in cell.zero_state(batch_size, tf.float32):
                 state_variables.append(tf.contrib.rnn.LSTMStateTuple(
-                    tf.Variable(state_c, trainable=False),
-                    tf.Variable(state_h, trainable=False)))
+                    tf.Variable(state_c, trainable=False, validate_shape=False),
+                    tf.Variable(state_h, trainable=False, validate_shape=False)))
             # Return as a tuple, so that it can be fed to dynamic_rnn as an initial state
             return tuple(state_variables)
 
@@ -134,7 +134,7 @@ class Model:
         decoder_cell = tf.contrib.rnn.MultiRNNCell(
             [create_rnn_cell('decoder') for _ in range(self.args.numLayers)],
         )
-        lastContextState = get_state_variables(self.batch_size, context_encoder_cell)
+        lastContextState = get_state_variables(self.batchSize, context_encoder_cell)
         # Creation of the Utterance encoder
         # cell: MultiRnnCell([ BasicLSTMCell(hiddenSize) ])
         # inputs: [ batchSize * sentenceLength * wordDimensions ]
@@ -158,7 +158,7 @@ class Model:
         # inputs: [ batchSize * sentenceLength * wordDimensions ]
         # lengths: [ batchSize ] length of each sentence in the batch (without taking padding into account)
         def context_encoder(cell, inputs, reset, batch_size=1, dtype=tf.float32, scope='context_encoder'):
-            initial_state = cell.zero_state(self.batchSize, tf.float32) if reset else self.lastContextState
+            initial_state = lastContextState
             outputs, state = tf.nn.dynamic_rnn(
                 cell=cell,
                 dtype=dtype,
@@ -198,7 +198,7 @@ class Model:
 
         self.lossFct = 0
 
-        with tf.variable_scope('utterances', reuse=reuse):
+        with tf.variable_scope('utterances'):
             utteranceEncInput = tf.reshape(self.utteranceEncInputs[:,:], [self.args.maxLengthEnco, self.batchSize, 1])
             utteranceEncLength = tf.reshape(self.utteranceEncLengths[:], [self.batchSize])
 
@@ -210,7 +210,7 @@ class Model:
                 batch_size=self.batchSize
             )
 
-        with tf.variable_scope('context', reuse=reuse):
+        with tf.variable_scope('context'):
             self.contextEncInputs = tf.reshape(utteranceEncOutputs[-1], [1, self.batchSize, self.args.hiddenSize])
 
             contextEncOutputs, contextEncState = context_encoder(
@@ -221,7 +221,7 @@ class Model:
             reset_op = get_state_reset_op(lastContextState, context_encoder_cell, self.batchSize)
             update_op = get_state_update_op(lastContextState, contextEncState)
 
-        with tf.variable_scope('decoders', reuse=reuse):
+        with tf.variable_scope('decoders'):
             decoderOutputs, decoderState = decoder(
                 cell=decoder_cell,
                 inputs=self.decoderInputs,

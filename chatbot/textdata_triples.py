@@ -162,7 +162,7 @@ class TextData:
                     batch.encoderSeqs.append(list(reversed(sample[u])))  # Reverse inputs (and not outputs), little trick as defined on the original seq2seq paper                
                     batch.encoderLengths.append(len(batch.encoderSeqs[i]))
                     batch.decoderSeqs.append([self.goToken] + sample[u+1] + [self.eosToken])  # Add the <go> and <eos> tokens
-                    batch.targetSeqs.append(batch.decoderSeqs[u][-1][1:])  # Same as decoder, but shifted to the left (ignore the <go>)
+                    batch.targetSeqs.append(batch.decoderSeqs[-1][1:])  # Same as decoder, but shifted to the left (ignore the <go>)
 
                     # Long sentences should have been filtered during the dataset creation
                     assert len(batch.encoderSeqs[i]) <= self.args.maxLengthEnco
