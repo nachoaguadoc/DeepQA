@@ -202,17 +202,16 @@ class Model:
                     feed_previous=bool(self.args.test),
                     dtype=tf.int32
                 )
+            if not self.args.test:
+                self.lossFct += tf.contrib.legacy_seq2seq.sequence_loss(
+                    decoderOutputs,
+                    self.decoderTargets[i],
+                    self.decoderWeights[i],
+                    self.textData.getVocabularySize(),
+                    softmax_loss_function= None  # If None, use default SoftMax
+                )
+                tf.summary.scalar('loss', self.lossFct)  # Keep track of the cost
         if not self.args.test:
-            self.lossFct += tf.contrib.legacy_seq2seq.sequence_loss(
-                decoderOutputs,
-                self.decoderTargets[i],
-                self.decoderWeights[i],
-                self.textData.getVocabularySize(),
-                softmax_loss_function= None  # If None, use default SoftMax
-            )
-            print(self.lossFct)
-            tf.summary.scalar('loss', self.lossFct)  # Keep track of the cost
-
             # Initialize the optimizer
             opt = tf.train.AdamOptimizer(
                 learning_rate=self.args.learningRate,
