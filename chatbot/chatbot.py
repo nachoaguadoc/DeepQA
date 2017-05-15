@@ -249,6 +249,8 @@ class Chatbot:
                     for batch in nextBatch:
                         # Training pass
                         resetOps, updateOps, feedDict = self.model.step(batch)
+                        if feedDict = None:
+                            continue
                         if first:
                             first = False
                             _, _, loss, summary = sess.run(resetOps + (mergedSummaries,), feedDict)

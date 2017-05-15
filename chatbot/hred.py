@@ -266,9 +266,8 @@ class Model:
         # Feed the dictionary
         feedDict = {}
         ops = None
-        print(batch)
-        print("BATCH ************")
         if not self.args.test:  # Training
+
             feedDict[self.batchSize] = batch.batchSize
             feedDict[self.utteranceEncLengths] = batch.encoderLengths
             feedDict[self.utteranceEncInputs] = batch.encoderSeqs
@@ -279,6 +278,8 @@ class Model:
 
             resetOps = (self.optOp, self.resetOps, self.lossFct)
             updateOps = (self.optOp, self.updateOps, self.lossFct)
+            if batch.batchSize!=self.args.batchSize:
+                feedDict = None
         else:  # Testing (batchSize == 1)
             feedDict[self.batchSize] = batch.batchSize
             feedDict[self.utteranceEncLengths] = np.reshape(batch.encoderLengths, [batch.batchSize,1])
