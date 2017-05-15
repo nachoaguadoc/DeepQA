@@ -62,15 +62,44 @@ class Model:
     def buildNetwork(self):
         """ Create the computational graph
         """
-        # Creation of the rnn cell
+
+        def get_state_variables(batch_size, cell):
+            # For each layer, get the initial state and make a variable out of it
+            # to enable updating its value.
+            state_variables = []
+            for state_c, state_h in cell.zero_state(batch_size, tf.float32):
+                state_variables.append(tf.contrib.rnn.LSTMStateTuple(
+                    tf.Variable(state_c, trainable=False),
+                    tf.Variable(state_h, trainable=False)))
+            # Return as a tuple, so that it can be fed to dynamic_rnn as an initial state
+            return tuple(state_variables)
+
+        def get_state_update_op(state_variables, new_states):
+            # Add an operation to update the train states with the last state tensors
+            update_ops = []
+            for state_variable, new_state in zip(state_variables, new_states):
+                # Assign the new state to the state variables on this layer
+                update_ops.extend([state_variable[0].assign(new_state[0]),
+                                   state_variable[1].assign(new_state[1])])
+            # Return a tuple in order to combine all update_ops into a single operation.
+            # The tuple's actual value should not be used.
+            return tf.tuple(update_ops)
+
+        def get_state_reset_op(state_variables, cell, batch_size):
+            # Return an operation to set each variable in a list of LSTMStateTuples to zero
+            zero_states = cell.zero_state(batch_size, tf.float32)
+            return get_state_update_op(state_variables, zero_states)
+
 
         init_op = tf.global_variables_initializer()
+
         with tf.name_scope('placeholder_batch'):
             self.batchSize = tf.placeholder(tf.int32)
         if self.args.test:
             self.numberUtterances = 1
         else: 
             self.numberUtterances = 2
+
         def create_rnn_cell(scope):
             with tf.variable_scope(scope):
                 encoDecoCell = tf.contrib.rnn.BasicLSTMCell(  # Or GRUCell, LSTMCell(args.hiddenSize)
@@ -105,7 +134,7 @@ class Model:
         decoder_cell = tf.contrib.rnn.MultiRNNCell(
             [create_rnn_cell('decoder') for _ in range(self.args.numLayers)],
         )
-        self.lastContextState = context_encoder_cell.zero_state(self.batchSize, tf.float32)
+        lastContextState = get_state_variables(self.batch_size, context_encoder_cell)
         # Creation of the Utterance encoder
         # cell: MultiRnnCell([ BasicLSTMCell(hiddenSize) ])
         # inputs: [ batchSize * sentenceLength * wordDimensions ]
@@ -138,7 +167,7 @@ class Model:
                 initial_state = initial_state,
                 scope=scope)
             return outputs, state
-
+            
         # Creation of the Utterance encoder
         # cell: MultiRnnCell([ BasicLSTMCell(hiddenSize) ])
         # inputs: [ batchSize * sentenceLength * wordDimensions ]
@@ -158,60 +187,58 @@ class Model:
         # Network input (placeholders)
         
         with tf.name_scope('placeholder_utterance_encoder'):
-            self.utteranceEncInputs  = tf.placeholder(tf.int32, [self.args.maxLengthEnco, None, None])
-            self.utteranceEncLengths = tf.placeholder(tf.int32, [None, None]) # Batch size
+            self.utteranceEncInputs  = tf.placeholder(tf.int32, [self.args.maxLengthEnco, None])
+            self.utteranceEncLengths = tf.placeholder(tf.int32, [None]) # Batch size
 
         with tf.name_scope('placeholder_decoder'):
-            self.decoderInputs  = [[tf.placeholder(tf.int32,   [None, ], name='inputs') for _ in range(self.args.maxLengthDeco)] for _ in range(self.numberUtterances)]  # Same sentence length for input and output (Right ?)
-            self.decoderTargets = [[tf.placeholder(tf.int32,   [None, ], name='targets') for _ in range(self.args.maxLengthDeco)] for _ in range(self.numberUtterances)]
-            self.decoderWeights = [[tf.placeholder(tf.float32, [None, ], name='weights') for _ in range(self.args.maxLengthDeco)] for _ in range(self.numberUtterances)]
+            self.decoderInputs  = [tf.placeholder(tf.int32,   [None, ], name='inputs') for _ in range(self.args.maxLengthDeco)]  # Same sentence length for input and output (Right ?)
+            self.decoderTargets = [tf.placeholder(tf.int32,   [None, ], name='targets') for _ in range(self.args.maxLengthDeco)]
+            self.decoderWeights = [tf.placeholder(tf.float32, [None, ], name='weights') for _ in range(self.args.maxLengthDeco)]
             
 
         self.lossFct = 0
-        for i in range(self.numberUtterances):
-            reuse = False if i==0 else True
-            reset = not reuse
-            with tf.variable_scope('utterances', reuse=reuse):
-                utteranceEncInput = tf.reshape(self.utteranceEncInputs[:,:,i], [self.args.maxLengthEnco, self.batchSize, 1])
-                utteranceEncLength = tf.reshape(self.utteranceEncLengths[:,i], [self.batchSize])
 
-                utteranceEncOutputs, utteranceEncState = utterance_encoder(
-                    cell=utterance_encoder_cell,
-                    inputs=utteranceEncInput,
-                    sequence_length=utteranceEncLength,
-                    reset=True,
-                    batch_size=self.batchSize
-                )
+        with tf.variable_scope('utterances', reuse=reuse):
+            utteranceEncInput = tf.reshape(self.utteranceEncInputs[:,:], [self.args.maxLengthEnco, self.batchSize, 1])
+            utteranceEncLength = tf.reshape(self.utteranceEncLengths[:], [self.batchSize])
 
-            with tf.variable_scope('context', reuse=reuse):
-                self.contextEncInputs = tf.reshape(utteranceEncOutputs[-1], [1, self.batchSize, self.args.hiddenSize])
+            utteranceEncOutputs, utteranceEncState = utterance_encoder(
+                cell=utterance_encoder_cell,
+                inputs=utteranceEncInput,
+                sequence_length=utteranceEncLength,
+                reset=True,
+                batch_size=self.batchSize
+            )
 
-                contextEncOutputs, contextEncState = context_encoder(
-                    cell=context_encoder_cell,
-                    inputs=self.contextEncInputs,
-                    reset=reset
-                )
+        with tf.variable_scope('context', reuse=reuse):
+            self.contextEncInputs = tf.reshape(utteranceEncOutputs[-1], [1, self.batchSize, self.args.hiddenSize])
 
-                self.lastContextState = contextEncState
+            contextEncOutputs, contextEncState = context_encoder(
+                cell=context_encoder_cell,
+                inputs=self.contextEncInputs,
+                reset=reset
+            )
+            reset_op = get_state_reset_op(lastContextState, context_encoder_cell, self.batchSize)
+            update_op = get_state_update_op(lastContextState, contextEncState)
 
-            with tf.variable_scope('decoders', reuse=reuse):
-                decoderOutputs, decoderState = decoder(
-                    cell=decoder_cell,
-                    inputs=self.decoderInputs[i],
-                    initial_state=self.lastContextState,
-                    feed_previous=bool(self.args.test),
-                    dtype=tf.int32
-                )
-            if not self.args.test:
-                self.lossFct += tf.contrib.legacy_seq2seq.sequence_loss(
-                    decoderOutputs,
-                    self.decoderTargets[i],
-                    self.decoderWeights[i],
-                    self.textData.getVocabularySize(),
-                    softmax_loss_function= None  # If None, use default SoftMax
-                )
-                tf.summary.scalar('loss', self.lossFct)  # Keep track of the cost
+        with tf.variable_scope('decoders', reuse=reuse):
+            decoderOutputs, decoderState = decoder(
+                cell=decoder_cell,
+                inputs=self.decoderInputs,
+                initial_state=lastContextState,
+                feed_previous=bool(self.args.test),
+                dtype=tf.int32
+            )
         if not self.args.test:
+            self.lossFct += tf.contrib.legacy_seq2seq.sequence_loss(
+                decoderOutputs,
+                self.decoderTargets,
+                self.decoderWeights,
+                self.textData.getVocabularySize(),
+                softmax_loss_function= None  # If None, use default SoftMax
+            )
+            tf.summary.scalar('loss', self.lossFct)  # Keep track of the cost
+    
             # Initialize the optimizer
             opt = tf.train.AdamOptimizer(
                 learning_rate=self.args.learningRate,
@@ -219,6 +246,8 @@ class Model:
                 beta2=0.999,
                 epsilon=1e-08
             )
+            self.resetOps = reset_op
+            self.updateOps = update_op
             self.optOp = opt.minimize(self.lossFct)
         else: 
             self.outputs = decoderOutputs
@@ -237,15 +266,15 @@ class Model:
         ops = None
         if not self.args.test:  # Training
             feedDict[self.batchSize] = batch.batchSize
-            feedDict[self.utteranceEncLengths] = np.reshape(np.dstack((batch.encoderLengths[0], batch.encoderLengths[1])), (batch.batchSize, self.numberUtterances))
-            feedDict[self.utteranceEncInputs] = np.reshape(np.dstack((batch.encoderSeqs[0], batch.encoderSeqs[1])), (self.args.maxLengthEnco, batch.batchSize, self.numberUtterances))
-            for u in range(self.numberUtterances):
-                for i in range(self.args.maxLengthDeco):
-                    feedDict[self.decoderInputs[u][i]]  = batch.decoderSeqs[u][i]
-                    feedDict[self.decoderTargets[u][i]] = batch.targetSeqs[u][i]
-                    feedDict[self.decoderWeights[u][i]] = batch.weights[u][i]
+            feedDict[self.utteranceEncLengths] = batch.encoderLengths
+            feedDict[self.utteranceEncInputs] = batch.encoderSeqs
+            for i in range(self.args.maxLengthDeco):
+                feedDict[self.decoderInputs[i]]  = batch.decoderSeqs[i]
+                feedDict[self.decoderTargets[i]] = batch.targetSeqs[i]
+                feedDict[self.decoderWeights[i]] = batch.weights[i]
 
-            ops = (self.optOp, self.lossFct)
+            resetOps = (self.optOp, self.resetOps, self.lossFct)
+            updateOps = (self.optOp, self.updateOps, self.lossFct)
         else:  # Testing (batchSize == 1)
             feedDict[self.batchSize] = batch.batchSize
             feedDict[self.utteranceEncLengths] = np.reshape(batch.encoderLengths, [batch.batchSize,1])
@@ -254,4 +283,4 @@ class Model:
             ops = (self.outputs,)
         # Return one pass operator
 
-        return ops, feedDict
+        return resetOps, updateOps, feedDict

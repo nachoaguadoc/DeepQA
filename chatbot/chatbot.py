@@ -245,22 +245,28 @@ class Chatbot:
 
                 tic = datetime.datetime.now()
                 for nextBatch in tqdm(batches, desc="Training"):
-                    # Training pass
-                    ops, feedDict = self.model.step(nextBatch)
-                    assert len(ops) == 2  # training, loss
-                    _, loss, summary = sess.run(ops + (mergedSummaries,), feedDict)
-                    print(loss)
-                    self.writer.add_summary(summary, self.globStep)
-                    self.globStep += 1
+                    first = True
+                    for batch in nextBatch:
+                        # Training pass
+                        resetOps, updateOps, feedDict = self.model.step(nextBatch)
+                        if first:
+                            first = False
+                            sess.run(tf.global_variables_initializer())
+                            _, loss, summary = sess.run(resetOps + (mergedSummaries,), feedDict)
+                        else:
+                            _, loss, summary = sess.run(updateOps + (mergedSummaries,), feedDict)
+                        print(loss)
+                        self.writer.add_summary(summary, self.globStep)
+                        self.globStep += 1
 
-                    # Output training status
-                    if self.globStep % 100 == 0:
-                        perplexity = math.exp(float(loss)) if loss < 300 else float("inf")
-                        tqdm.write("----- Step %d -- Loss %.2f -- Perplexity %.2f" % (self.globStep, loss, perplexity))
+                        # Output training status
+                        if self.globStep % 100 == 0:
+                            perplexity = math.exp(float(loss)) if loss < 300 else float("inf")
+                            tqdm.write("----- Step %d -- Loss %.2f -- Perplexity %.2f" % (self.globStep, loss, perplexity))
 
-                    # Checkpoint
-                    if self.globStep % self.args.saveEvery == 0:
-                        self._saveSession(sess)
+                        # Checkpoint
+                        if self.globStep % self.args.saveEvery == 0:
+                            self._saveSession(sess)
 
                 toc = datetime.datetime.now()
 
