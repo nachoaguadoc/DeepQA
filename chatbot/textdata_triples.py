@@ -149,16 +149,14 @@ class TextData:
                 batchSize = len(samples)
                 batch.batchSize = batchSize
                 batches.append(batch)
-            for i in range(batchSize):
-                # Unpack the sample
-                sample = samples[i]
-
-                # TODO: Why re-processed that at each epoch ? Could precompute that
-                # once and reuse those every time. Is not the bottleneck so won't change
-                # much ? and if preprocessing, should be compatible with autoEncode & cie.
-                
-                for u in range(numberOfUtterances):
+                for i in range(batchSize):
                     batch = batches[u]
+                    # Unpack the sample
+                    sample = samples[i]
+
+                    # TODO: Why re-processed that at each epoch ? Could precompute that
+                    # once and reuse those every time. Is not the bottleneck so won't change
+                    # much ? and if preprocessing, should be compatible with autoEncode & cie.
                     batch.encoderSeqs.append(list(reversed(sample[u])))  # Reverse inputs (and not outputs), little trick as defined on the original seq2seq paper                
                     batch.encoderLengths.append(len(batch.encoderSeqs[i]))
                     batch.decoderSeqs.append([self.goToken] + sample[u+1] + [self.eosToken])  # Add the <go> and <eos> tokens
@@ -174,35 +172,32 @@ class TextData:
                     batch.weights.append([1.0] * len(batch.targetSeqs[i]) + [0.0] * (self.args.maxLengthDeco - len(batch.targetSeqs[i])))
                     batch.decoderSeqs[i] = batch.decoderSeqs[i] + [self.padToken] * (self.args.maxLengthDeco - len(batch.decoderSeqs[i]))
                     batch.targetSeqs[i]  = batch.targetSeqs[i]  + [self.padToken] * (self.args.maxLengthDeco - len(batch.targetSeqs[i]))
-            for u in range(numberOfUtterances):
-                batch = batches[u]
-                # Simple hack to reshape the batch
-                encoderSeqsT = []  # Corrected orientation
-                for i in range(self.args.maxLengthEnco):
-                    encoderSeqT = []
-                    for j in range(batchSize):
-                        encoderSeqT.append(batch.encoderSeqs[j][i])
-                    encoderSeqsT.append(encoderSeqT)
-                batch.encoderSeqs = encoderSeqsT
 
-                decoderSeqsT = []
-                targetSeqsT = []
-                weightsT = []
-                for i in range(self.args.maxLengthDeco):
-                    decoderSeqT = []
-                    targetSeqT = []
-                    weightT = []
-                    for j in range(batchSize):
-                        decoderSeqT.append(batch.decoderSeqs[j][i])
-                        targetSeqT.append(batch.targetSeqs[j][i])
-                        weightT.append(batch.weights[j][i])
-                    decoderSeqsT.append(decoderSeqT)
-                    targetSeqsT.append(targetSeqT)
-                    weightsT.append(weightT)
-                batch.decoderSeqs = decoderSeqsT
-                batch.targetSeqs = targetSeqsT
-                batch.weights = weightsT
-                return batches
+                    encoderSeqsT = []  # Corrected orientation
+                    for i in range(self.args.maxLengthEnco):
+                        encoderSeqT = []
+                        for j in range(batchSize):
+                            encoderSeqT.append(batch.encoderSeqs[j][i])
+                        encoderSeqsT.append(encoderSeqT)
+                    batch.encoderSeqs = encoderSeqsT
+
+                    decoderSeqsT = []
+                    targetSeqsT = []
+                    weightsT = []
+                    for i in range(self.args.maxLengthDeco):
+                        decoderSeqT = []
+                        targetSeqT = []
+                        weightT = []
+                        for j in range(batchSize):
+                            decoderSeqT.append(batch.decoderSeqs[j][i])
+                            targetSeqT.append(batch.targetSeqs[j][i])
+                            weightT.append(batch.weights[j][i])
+                        decoderSeqsT.append(decoderSeqT)
+                        targetSeqsT.append(targetSeqT)
+                        weightsT.append(weightT)
+                    batch.decoderSeqs = decoderSeqsT
+                    batch.targetSeqs = targetSeqsT
+                    batch.weights = weightsT
         else:
             # Create the batch tensor
 
