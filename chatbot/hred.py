@@ -157,7 +157,7 @@ class Model:
         # cell: MultiRnnCell([ BasicLSTMCell(hiddenSize) ])
         # inputs: [ batchSize * sentenceLength * wordDimensions ]
         # lengths: [ batchSize ] length of each sentence in the batch (without taking padding into account)
-        def context_encoder(cell, inputs, reset, batch_size=1, dtype=tf.float32, scope='context_encoder'):
+        def context_encoder(cell, inputs, batch_size=1, dtype=tf.float32, scope='context_encoder'):
             initial_state = lastContextState
             outputs, state = tf.nn.dynamic_rnn(
                 cell=cell,
@@ -215,8 +215,7 @@ class Model:
 
             contextEncOutputs, contextEncState = context_encoder(
                 cell=context_encoder_cell,
-                inputs=self.contextEncInputs,
-                reset=reset
+                inputs=self.contextEncInputs
             )
             reset_op = get_state_reset_op(lastContextState, context_encoder_cell, self.batchSize)
             update_op = get_state_update_op(lastContextState, contextEncState)
