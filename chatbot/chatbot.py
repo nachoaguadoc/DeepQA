@@ -248,13 +248,12 @@ class Chatbot:
                     first = True
                     for batch in nextBatch:
                         # Training pass
-                        resetOps, updateOps, feedDict = self.model.step(nextBatch)
+                        resetOps, updateOps, feedDict = self.model.step(batch)
                         if first:
                             first = False
-                            sess.run(tf.global_variables_initializer())
-                            _, loss, summary = sess.run(resetOps + (mergedSummaries,), feedDict)
+                            _, _, loss, summary = sess.run(resetOps + (mergedSummaries,), feedDict)
                         else:
-                            _, loss, summary = sess.run(updateOps + (mergedSummaries,), feedDict)
+                            _, _, loss, summary = sess.run(updateOps + (mergedSummaries,), feedDict)
                         print(loss)
                         self.writer.add_summary(summary, self.globStep)
                         self.globStep += 1

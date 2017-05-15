@@ -69,9 +69,12 @@ class Model:
             state_variables = []
             for state_c, state_h in cell.zero_state(batch_size, tf.float32):
                 state_variables.append(tf.contrib.rnn.LSTMStateTuple(
-                    tf.Variable(state_c, trainable=False, validate_shape=False),
-                    tf.Variable(state_h, trainable=False, validate_shape=False)))
-            # Return as a tuple, so that it can be fed to dynamic_rnn as an initial state
+                    tf.get_variable(name="c", shape=[self.args.batchSize, self.args.hiddenSize], initializer=tf.zeros_initializer()),
+                    tf.get_variable(name="h", shape=[self.args.batchSize, self.args.hiddenSize], initializer=tf.zeros_initializer())))
+                    #tf.Variable(state_c, name='c', trainable=False, validate_shape=False),
+                    #tf.Variable(state_h, name='h', trainable=False, validate_shape=False)))
+                print(state_variables)
+                # Return as a tuple, so that it can be fed to dynamic_rnn as an initial state
             return tuple(state_variables)
 
         def get_state_update_op(state_variables, new_states):
@@ -263,6 +266,8 @@ class Model:
         # Feed the dictionary
         feedDict = {}
         ops = None
+        print(batch)
+        print("BATCH ************")
         if not self.args.test:  # Training
             feedDict[self.batchSize] = batch.batchSize
             feedDict[self.utteranceEncLengths] = batch.encoderLengths
