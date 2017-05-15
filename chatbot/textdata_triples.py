@@ -172,32 +172,34 @@ class TextData:
                     batch.weights.append([1.0] * len(batch.targetSeqs[i]) + [0.0] * (self.args.maxLengthDeco - len(batch.targetSeqs[i])))
                     batch.decoderSeqs[i] = batch.decoderSeqs[i] + [self.padToken] * (self.args.maxLengthDeco - len(batch.decoderSeqs[i]))
                     batch.targetSeqs[i]  = batch.targetSeqs[i]  + [self.padToken] * (self.args.maxLengthDeco - len(batch.targetSeqs[i]))
+            for u in range(numberOfUtterances):
+                batch = batches[u]
+                encoderSeqsT = []  # Corrected orientation
+                for i in range(self.args.maxLengthEnco):
+                    encoderSeqT = []
+                    for j in range(batchSize):
+                        encoderSeqT.append(batch.encoderSeqs[j][i])
+                    encoderSeqsT.append(encoderSeqT)
+                batch.encoderSeqs = encoderSeqsT
 
-                    encoderSeqsT = []  # Corrected orientation
-                    for k in range(self.args.maxLengthEnco):
-                        encoderSeqT = []
-                        for j in range(batchSize):
-                            encoderSeqT.append(batch.encoderSeqs[j][k])
-                        encoderSeqsT.append(encoderSeqT)
-                    batch.encoderSeqs = encoderSeqsT
-
-                    decoderSeqsT = []
-                    targetSeqsT = []
-                    weightsT = []
-                    for k in range(self.args.maxLengthDeco):
-                        decoderSeqT = []
-                        targetSeqT = []
-                        weightT = []
-                        for j in range(batchSize):
-                            decoderSeqT.append(batch.decoderSeqs[j][k])
-                            targetSeqT.append(batch.targetSeqs[j][k])
-                            weightT.append(batch.weights[j][k])
-                        decoderSeqsT.append(decoderSeqT)
-                        targetSeqsT.append(targetSeqT)
-                        weightsT.append(weightT)
-                    batch.decoderSeqs = decoderSeqsT
-                    batch.targetSeqs = targetSeqsT
-                    batch.weights = weightsT
+                decoderSeqsT = []
+                targetSeqsT = []
+                weightsT = []
+                for i in range(self.args.maxLengthDeco):
+                    decoderSeqT = []
+                    targetSeqT = []
+                    weightT = []
+                    for j in range(batchSize):
+                        decoderSeqT.append(batch.decoderSeqs[j][i])
+                        targetSeqT.append(batch.targetSeqs[j][i])
+                        weightT.append(batch.weights[j][i])
+                    decoderSeqsT.append(decoderSeqT)
+                    targetSeqsT.append(targetSeqT)
+                    weightsT.append(weightT)
+                batch.decoderSeqs = decoderSeqsT
+                batch.targetSeqs = targetSeqsT
+                batch.weights = weightsT
+            return batches
         else:
             # Create the batch tensor
 
