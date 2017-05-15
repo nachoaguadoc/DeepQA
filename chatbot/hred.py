@@ -73,7 +73,6 @@ class Model:
                     tf.get_variable(name="h", shape=[self.args.batchSize, self.args.hiddenSize], initializer=tf.zeros_initializer())))
                     #tf.Variable(state_c, name='c', trainable=False, validate_shape=False),
                     #tf.Variable(state_h, name='h', trainable=False, validate_shape=False)))
-                print(state_variables)
                 # Return as a tuple, so that it can be fed to dynamic_rnn as an initial state
             return tuple(state_variables)
 
