@@ -30,7 +30,7 @@ import math
 from tqdm import tqdm  # Progress bar
 from tensorflow.python import debug as tf_debug
 
-from chatbot.textdata import TextData
+from chatbot.textdata_triples import TextData
 #from chatbot.model import Model
 from chatbot.hred import Model
 
