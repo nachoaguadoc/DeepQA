@@ -212,13 +212,14 @@ class TextData:
                 sample = samples[0][0]
                 batch.encoderSeqs.append(list(reversed(sample)))  # Reverse inputs (and not outputs), little trick as defined on the original seq2seq paper               
                 batch.encoderLengths.append(len(batch.encoderSeqs[i]))
+                batch.decoderSeqs.append([self.textData.goToken])  # Add the <go> token
                 # Long sentences should have been filtered during the dataset creation
                 assert len(batch.encoderSeqs[i]) <= self.args.maxLengthEnco
 
                 # TODO: Should use tf batch function to automatically add padding and batch samples
                 # Add padding & define weight
                 batch.encoderSeqs[i]   = [self.padToken] * (self.args.maxLengthEnco  - len(batch.encoderSeqs[i])) + batch.encoderSeqs[i]  # Left padding for the input
-
+                batch.decoderSeqs[i] = batch.decoderSeqs[i] + [self.padToken] * (self.args.maxLengthDeco - len(batch.decoderSeqs[i]))
                     # Simple hack to reshape the batch
             encoderSeqsT = []  # Corrected orientation
             for i in range(self.args.maxLengthEnco):
@@ -227,6 +228,15 @@ class TextData:
                     encoderSeqT.append(batch.encoderSeqs[j][i])
                 encoderSeqsT.append(encoderSeqT)
             batch.encoderSeqs = encoderSeqsT
+
+            decoderSeqsT = []
+            for i in range(self.args.maxLengthDeco):
+                decoderSeqT = []
+                for j in range(batchSize):
+                    decoderSeqT.append(batch.decoderSeqs[j][i])
+                decoderSeqsT.append(decoderSeqT)
+            batch.decoderSeqs = decoderSeqsT
+
             batches = batch
 
         # self.printBatch(batch)  # Input inverted, padding should be correct

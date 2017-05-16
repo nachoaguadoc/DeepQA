@@ -285,7 +285,7 @@ class Model:
             feedDict[self.batchSize] = self.args.batchSize
             feedDict[self.utteranceEncLengths] = batch.encoderLengths
             feedDict[self.utteranceEncInputs] = batch.encoderSeqs
-            feedDict[self.decoderInputs[0]]  = [self.textData.goToken]
+            feedDict[self.decoderInputs[0]]  = batch.decoderSeqs[0]
             resetOps = (self.resetOps,)
             updateOps = (self.updateOps, self.outputs)
         # Return one pass operator
