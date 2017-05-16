@@ -226,7 +226,7 @@ class TextData:
                     encoderSeqT.append(batch.encoderSeqs[j][i])
                 encoderSeqsT.append(encoderSeqT)
             batch.encoderSeqs = encoderSeqsT
-            batches.append(batch)
+            batches = batch
 
         # self.printBatch(batch)  # Input inverted, padding should be correct
         # print(self.sequence2str(samples[0][0]))

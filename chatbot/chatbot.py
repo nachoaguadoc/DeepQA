@@ -334,7 +334,7 @@ class Chatbot:
             if question == '' or question == 'exit':
                 break
 
-            questionSeq = []  # Will be contain the question as seen by the encoder
+            questionSeq = None  # Will be contain the question as seen by the encoder
             answer = self.singlePredict(question, questionSeq)
             if not answer:
                 print('Warning: sentence too long, sorry. Maybe try a simpler sentence.')
