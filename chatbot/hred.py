@@ -281,10 +281,11 @@ class Model:
                 feedDict = None
         else:  # Testing (batchSize == 1)
             feedDict[self.batchSize] = batch.batchSize
-            feedDict[self.utteranceEncLengths] = np.reshape(batch.encoderLengths, [batch.batchSize,1])
-            feedDict[self.utteranceEncInputs] = np.reshape(batch.encoderSeqs, [self.args.maxLengthEnco, batch.batchSize, 1])
-            feedDict[self.decoderInputs[0][0]]  = [self.textData.goToken]
-            ops = (self.outputs,)
+            feedDict[self.utteranceEncLengths] = batch.encoderLengths
+            feedDict[self.utteranceEncInputs] = batch.encoderSeqs
+            feedDict[self.decoderInputs[0]]  = [self.textData.goToken]
+            resetOps = (self.resetOps,)
+            updateOps = (self.updateOps, self.outputs)
         # Return one pass operator
 
         return resetOps, updateOps, feedDict

@@ -364,9 +364,13 @@ class Chatbot:
             questionSeq.extend(batch.encoderSeqs)
 
         # Run the model
-        ops, feedDict = self.model.step(batch)
-        output = self.sess.run(ops[0], feedDict)  # TODO: Summarize the output too (histogram, ...)
-        answer = self.textData.deco2sentence(output)
+        resetOps, updateOps, feedDict = self.model.step(batch)
+        if question=='reset':
+            output = self.sess.run(resetOps, feedDict)  # TODO: Summarize the output too (histogram, ...)
+            answer = "Reseted!"
+        else:
+            output = self.sess.run(updateOps, feedDict)
+            answer = self.textData.deco2sentence(output)
 
         return answer
 
