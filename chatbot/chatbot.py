@@ -339,6 +339,9 @@ class Chatbot:
             if not answer:
                 print('Warning: sentence too long, sorry. Maybe try a simpler sentence.')
                 continue  # Back to the beginning, try again
+            elif answer=='Reset done!':
+                print('{}{}'.format(self.SENTENCES_PREFIX[1], 'Reset done!'))
+                continue
 
             print('{}{}'.format(self.SENTENCES_PREFIX[1], self.textData.sequence2str(answer, clean=True)))
 
@@ -367,12 +370,13 @@ class Chatbot:
         resetOps, updateOps, feedDict = self.model.step(batch)
         if question=='reset':
             output = self.sess.run(resetOps, feedDict)  # TODO: Summarize the output too (histogram, ...)
-            answer = "Reseted!"
+            answer = "Reset done!"
         else:
-            output = self.sess.run(updateOps, feedDict)
-            #answer = self.textData.deco2sentence(output)
-            print(output)
-            answer = "*********"
+            output = self.sess.run(updateOps, feedDict)[1]
+            output_words = []
+            for i in range(len(output)):
+                output_words.append(output[i][0])
+            answer = self.textData.deco2sentence(output_words)
         return answer
 
     def daemonPredict(self, sentence):
