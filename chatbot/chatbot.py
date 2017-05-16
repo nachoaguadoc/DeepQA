@@ -370,8 +370,9 @@ class Chatbot:
             answer = "Reseted!"
         else:
             output = self.sess.run(updateOps, feedDict)
-            answer = self.textData.deco2sentence(output)
-
+            #answer = self.textData.deco2sentence(output)
+            print(output)
+            answer = "*********"
         return answer
 
     def daemonPredict(self, sentence):

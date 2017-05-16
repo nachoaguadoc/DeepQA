@@ -69,10 +69,8 @@ class Model:
             state_variables = []
             for state_c, state_h in cell.zero_state(batch_size, tf.float32):
                 state_variables.append(tf.contrib.rnn.LSTMStateTuple(
-                    state_size = 1 if self.args.test else self.args.batchSize
-
-                    tf.get_variable(name="c", shape=[state_size, self.args.hiddenSize], initializer=tf.zeros_initializer()),
-                    tf.get_variable(name="h", shape=[state_size, self.args.hiddenSize], initializer=tf.zeros_initializer())))
+                    tf.get_variable(name="c", shape=[self.args.batchSize, self.args.hiddenSize], initializer=tf.zeros_initializer()),
+                    tf.get_variable(name="h", shape=[self.args.batchSize, self.args.hiddenSize], initializer=tf.zeros_initializer())))
                     #tf.Variable(state_c, name='c', trainable=False, validate_shape=False),
                     #tf.Variable(state_h, name='h', trainable=False, validate_shape=False)))
                 # Return as a tuple, so that it can be fed to dynamic_rnn as an initial state
@@ -284,7 +282,7 @@ class Model:
             if batch.batchSize!=self.args.batchSize:
                 feedDict = None
         else:  # Testing (batchSize == 1)
-            feedDict[self.batchSize] = batch.batchSize
+            feedDict[self.batchSize] = self.args.batchSize
             feedDict[self.utteranceEncLengths] = batch.encoderLengths
             feedDict[self.utteranceEncInputs] = batch.encoderSeqs
             feedDict[self.decoderInputs[0]]  = [self.textData.goToken]
